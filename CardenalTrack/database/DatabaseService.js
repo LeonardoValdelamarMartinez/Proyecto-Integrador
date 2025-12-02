@@ -7,12 +7,16 @@ class DatabaseService {
     this.db = null;
     this.currentUserId = null;
 
-    // Para Web
+    // Claves para almacenamiento en Web
     this.storageKeyUsers = "usuarios";
-    this.storageKeyReportes = "reportes";
+    this.storageKeyReportes = "reportes_incidencias";
   }
 
-  // FECHA FORMATO MÉXICO
+  // =============================
+  // UTILIDADES GENERALES
+  // =============================
+
+  // Fecha y hora en zona horaria de México
   getNowMexicoDateTime() {
     try {
       const formatter = new Intl.DateTimeFormat("sv-SE", {
@@ -35,6 +39,12 @@ class DatabaseService {
     }
   }
 
+  // ID legible para usar como folio (usado en PantallaConfirmación como respaldo)
+  generateReportId() {
+    const now = this.getNowMexicoDateTime().replace(/[-:T]/g, "");
+    return `INC-${now}`;
+  }
+
   setCurrentUser(user) {
     this.currentUserId = user ? user.id : null;
   }
@@ -43,9 +53,15 @@ class DatabaseService {
     return this.currentUserId;
   }
 
-  // =====================================
-  // INICIALIZAR BD (USUARIOS + REPORTES)
-  // =====================================
+  async logout() {
+    // Por ahora sólo limpiamos el usuario actual
+    this.currentUserId = null;
+    return true;
+  }
+
+  // =============================
+  // INICIALIZAR BD (SQLite)
+  // =============================
   async initialize() {
     if (Platform.OS === "web") return;
     if (this.db) return;
@@ -64,24 +80,27 @@ class DatabaseService {
         fecha_creacion TEXT
       );
 
-      CREATE TABLE IF NOT EXISTS reportes (
+      CREATE TABLE IF NOT EXISTS reportes_incidencias (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        categoria TEXT NOT NULL,
-        descripcion TEXT NOT NULL,
-        ubicacion TEXT NOT NULL,
-        fecha TEXT NOT NULL,
-        estado TEXT NOT NULL,
-        user_id INTEGER,
-        FOREIGN KEY(user_id) REFERENCES usuarios(id)
+        titulo TEXT,
+        categoria TEXT,
+        descripcion TEXT,
+        ubicacion TEXT,
+        sector TEXT,
+        fecha TEXT,
+        estado TEXT,
+        prioridad TEXT,
+        fecha_completa TEXT,
+        user_id INTEGER
       );
     `);
 
-    console.log("BD inicializada (usuarios + reportes)");
+    console.log("BD inicializada (usuarios + reportes_incidencias)");
   }
 
-  // =====================================
+  // =============================
   // USUARIOS
-  // =====================================
+  // =============================
 
   async getAll() {
     if (Platform.OS === "web") {
@@ -100,7 +119,6 @@ class DatabaseService {
     if (Platform.OS === "web") {
       const lista = await this.getAll();
 
-      // Validar duplicados
       const existe = lista.find(
         (u) => u.email === email.trim() || u.username === username.trim()
       );
@@ -141,7 +159,6 @@ class DatabaseService {
     }
   }
 
-  // LOGIN
   async getUserEmailPassword(email, password) {
     await this.initialize();
 
@@ -164,7 +181,6 @@ class DatabaseService {
     return rows.length > 0 ? rows[0] : null;
   }
 
-  // RECUPERAR POR EMAIL
   async getUserByEmail(email) {
     await this.initialize();
 
@@ -181,7 +197,6 @@ class DatabaseService {
     return rows.length > 0 ? rows[0] : null;
   }
 
-  // CAMBIO DE CONTRASEÑA
   async updateUserPasswordByEmail(email, newPass) {
     await this.initialize();
 
@@ -204,41 +219,45 @@ class DatabaseService {
     );
   }
 
-  // =====================================
-  // REPORTES DE INCIDENCIA
-  // =====================================
+  // =============================
+  // REPORTES DE INCIDENCIAS
+  // =============================
 
   /**
-   * Recibe { categoria, descripcion, ubicacion, fecha?, estado? }
+   * Recibe un objeto reporte.
+   * Puede ser sencillo:
+   *   { categoria, descripcion, ubicacion, fecha?, estado? }
+   * o el formato completo:
+   *   { titulo, categoria, descripcion, ubicacion, sector, fecha,
+   *     estado, prioridad }
    */
-  async addReporteIncidencia({
-    categoria,
-    descripcion,
-    ubicacion,
-    fecha,
-    estado,
-  }) {
+  async addReporteIncidencia(reporte) {
     await this.initialize();
 
-    // Si hay usuario logueado lo usamos; si no, se guarda null
     const userId = this.getCurrentUserId() || null;
+    const fechaCompleta = this.getNowMexicoDateTime();
 
-    const fechaFinal = fecha || this.getNowMexicoDateTime();
-    const estadoFinal = estado || "pendiente";
+    const data = {
+      titulo: reporte.titulo || reporte.categoria || "Incidencia",
+      categoria: reporte.categoria || "",
+      descripcion: reporte.descripcion || "",
+      ubicacion: reporte.ubicacion || "",
+      sector: reporte.sector || reporte.ubicacion || "",
+      fecha: reporte.fecha || fechaCompleta,
+      estado: reporte.estado || "pendiente",
+      prioridad: reporte.prioridad || "Media",
+      fecha_completa: fechaCompleta,
+      user_id: userId,
+    };
 
-    // ---- MODO WEB ----
+    // --- MODO WEB (localStorage) ---
     if (Platform.OS === "web") {
-      const data = localStorage.getItem(this.storageKeyReportes);
-      const lista = data ? JSON.parse(data) : [];
+      const raw = localStorage.getItem(this.storageKeyReportes);
+      const lista = raw ? JSON.parse(raw) : [];
 
       const nuevo = {
         id: Date.now(),
-        categoria,
-        descripcion,
-        ubicacion,
-        fecha: fechaFinal,
-        estado: estadoFinal,
-        user_id: userId,
+        ...data,
       };
 
       lista.unshift(nuevo);
@@ -246,25 +265,46 @@ class DatabaseService {
       return nuevo;
     }
 
-    // ---- MODO NATIVO (SQLite) ----
+    // --- MODO NATIVO (SQLite) ---
     try {
-      const result = await this.db.runAsync(
-        `INSERT INTO reportes
-          (categoria, descripcion, ubicacion, fecha, estado, user_id)
-         VALUES (?, ?, ?, ?, ?, ?);`,
-        [categoria, descripcion, ubicacion, fechaFinal, estadoFinal, userId]
+      // aseguramos tabla
+      await this.db.runAsync(`
+        CREATE TABLE IF NOT EXISTS reportes_incidencias (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          titulo TEXT,
+          categoria TEXT,
+          descripcion TEXT,
+          ubicacion TEXT,
+          sector TEXT,
+          fecha TEXT,
+          estado TEXT,
+          prioridad TEXT,
+          fecha_completa TEXT,
+          user_id INTEGER
+        );
+      `);
+
+      const insertResult = await this.db.runAsync(
+        `INSERT INTO reportes_incidencias 
+          (titulo, categoria, descripcion, ubicacion, sector, fecha, estado, prioridad, fecha_completa, user_id)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?);`,
+        [
+          data.titulo,
+          data.categoria,
+          data.descripcion,
+          data.ubicacion,
+          data.sector,
+          data.fecha,
+          data.estado,
+          data.prioridad,
+          data.fecha_completa,
+          data.user_id,
+        ]
       );
 
-      console.log("Reporte insertado con id:", result.lastInsertRowId);
-
       return {
-        id: result.lastInsertRowId,
-        categoria,
-        descripcion,
-        ubicacion,
-        fecha: fechaFinal,
-        estado: estadoFinal,
-        user_id: userId,
+        id: insertResult.lastInsertRowId,
+        ...data,
       };
     } catch (error) {
       console.log("Error en INSERT reporte:", error);
@@ -272,43 +312,162 @@ class DatabaseService {
     }
   }
 
+  // Todos los reportes (para ListaIncidencias, Estadísticas, Seguimiento)
+  async getAllReportes() {
+    await this.initialize();
+
+    // Web
+    if (Platform.OS === "web") {
+      const raw = localStorage.getItem(this.storageKeyReportes);
+      const lista = raw ? JSON.parse(raw) : [];
+
+      return lista.map((r) => ({
+        id: r.id,
+        titulo: r.titulo || r.categoria || "Incidencia",
+        sector: r.sector || r.ubicacion || "N/A",
+        fecha: r.fecha || r.fecha_completa || "",
+        estado: r.estado || "pendiente",
+        categoria: r.categoria || "",
+        prioridad: r.prioridad || "Media",
+        fecha_completa: r.fecha_completa || r.fecha || "",
+        user_id: r.user_id || null,
+      }));
+    }
+
+    // SQLite
+    try {
+      await this.db.runAsync(`
+        CREATE TABLE IF NOT EXISTS reportes_incidencias (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          titulo TEXT,
+          categoria TEXT,
+          descripcion TEXT,
+          ubicacion TEXT,
+          sector TEXT,
+          fecha TEXT,
+          estado TEXT,
+          prioridad TEXT,
+          fecha_completa TEXT,
+          user_id INTEGER
+        );
+      `);
+
+      const rows = await this.db.getAllAsync(
+        "SELECT * FROM reportes_incidencias ORDER BY fecha_completa DESC;"
+      );
+
+      return rows.map((r) => ({
+        id: r.id,
+        titulo: r.titulo || r.categoria || "Incidencia",
+        sector: r.sector || r.ubicacion || "N/A",
+        fecha: r.fecha || r.fecha_completa || "",
+        estado: r.estado || "pendiente",
+        categoria: r.categoria || "",
+        prioridad: r.prioridad || "Media",
+        fecha_completa: r.fecha_completa,
+        user_id: r.user_id || null,
+      }));
+    } catch (e) {
+      console.log("Error en getAllReportes:", e);
+      return [];
+    }
+  }
+
+  // Un reporte por ID (usado en PantallaConfirmación)
+  async getReportById(id) {
+    await this.initialize();
+
+    if (Platform.OS === "web") {
+      const lista = await this.getAllReportes();
+      return lista.find((r) => r.id === id) || null;
+    }
+
+    try {
+      const rows = await this.db.getAllAsync(
+        "SELECT * FROM reportes_incidencias WHERE id = ? LIMIT 1;",
+        [id]
+      );
+      if (rows.length === 0) return null;
+
+      const r = rows[0];
+      return {
+        id: r.id,
+        titulo: r.titulo || r.categoria || "Incidencia",
+        sector: r.sector || r.ubicacion || "N/A",
+        fecha: r.fecha || r.fecha_completa || "",
+        estado: r.estado || "pendiente",
+        categoria: r.categoria || "",
+        prioridad: r.prioridad || "Media",
+        fecha_completa: r.fecha_completa,
+        user_id: r.user_id || null,
+        descripcion: r.descripcion || "",
+        ubicacion: r.ubicacion || "",
+      };
+    } catch (e) {
+      console.log("Error en getReportById:", e);
+      return null;
+    }
+  }
+
+  // Reportes sólo del usuario logueado
   async getReportesUsuarioActual() {
     await this.initialize();
     const userId = this.getCurrentUserId();
     if (!userId) return [];
 
     if (Platform.OS === "web") {
-      const data = localStorage.getItem(this.storageKeyReportes);
-      const lista = data ? JSON.parse(data) : [];
+      const lista = await this.getAllReportes();
       return lista.filter((r) => r.user_id === userId);
     }
 
-    const rows = await this.db.getAllAsync(
-      "SELECT * FROM reportes WHERE user_id = ? ORDER BY fecha DESC;",
-      [userId]
-    );
+    try {
+      const rows = await this.db.getAllAsync(
+        "SELECT * FROM reportes_incidencias WHERE user_id = ? ORDER BY fecha_completa DESC;",
+        [userId]
+      );
 
-    return rows;
+      return rows.map((r) => ({
+        id: r.id,
+        titulo: r.titulo || r.categoria || "Incidencia",
+        sector: r.sector || r.ubicacion || "N/A",
+        fecha: r.fecha || r.fecha_completa || "",
+        estado: r.estado || "pendiente",
+        categoria: r.categoria || "",
+        prioridad: r.prioridad || "Media",
+        fecha_completa: r.fecha_completa,
+        user_id: r.user_id || null,
+      }));
+    } catch (e) {
+      console.log("Error en getReportesUsuarioActual:", e);
+      return [];
+    }
   }
 
+  // Cambiar estado de un reporte (para seguimiento / administración)
   async updateReporteEstado(id, nuevoEstado) {
     await this.initialize();
-  
+
     if (Platform.OS === "web") {
-      const data = localStorage.getItem(this.storageKeyReportes);
-      const lista = data ? JSON.parse(data) : [];
+      const raw = localStorage.getItem(this.storageKeyReportes);
+      const lista = raw ? JSON.parse(raw) : [];
       const idx = lista.findIndex((r) => r.id === id);
       if (idx === -1) return null;
-  
+
       lista[idx].estado = nuevoEstado;
       localStorage.setItem(this.storageKeyReportes, JSON.stringify(lista));
       return true;
     }
-  
-    return await this.db.runAsync(
-      "UPDATE reportes SET estado = ? WHERE id = ?;",
-      [nuevoEstado, id]
-    );
+
+    try {
+      await this.db.runAsync(
+        "UPDATE reportes_incidencias SET estado = ? WHERE id = ?;",
+        [nuevoEstado, id]
+      );
+      return true;
+    } catch (e) {
+      console.log("Error en updateReporteEstado:", e);
+      return false;
+    }
   }
 }
 
