@@ -117,9 +117,7 @@ class DatabaseService {
       return nuevo;
     }
 
-    // -------------------------
     // MODO APP / SQLITE
-    // -------------------------
     try {
       const result = await this.db.runAsync(
         "INSERT INTO usuarios(nombre, email, username, password, fecha_creacion) VALUES (?, ?, ?, ?, ?);",
@@ -202,10 +200,7 @@ class DatabaseService {
     );
   }
 
-  // =========================
   // INCIDENCIAS / REPORTES
-  // =========================
-
   async crearIncidencia(userId, titulo, descripcion) {
     await this.initialize();
     const fechaMX = this.getNowMexicoDateTime();
