@@ -6,11 +6,13 @@ class DatabaseService {
   constructor() {
     this.db = null;
     this.currentUserId = null;
+
+    // Para Web
     this.storageKeyUsers = "usuarios";
   }
 
   // =========================
-  // Helpers de fecha MX
+  // FECHA FORMATO MÉXICO
   // =========================
   getNowMexicoDateTime() {
     try {
@@ -43,7 +45,7 @@ class DatabaseService {
   }
 
   // =========================
-  // Inicialización (SOLO tabla usuarios)
+  // INICIALIZACIÓN SOLO TABLA USUARIOS
   // =========================
   async initialize() {
     if (Platform.OS === "web") return;
@@ -83,10 +85,15 @@ class DatabaseService {
     await this.initialize();
     const fechaMX = this.getNowMexicoDateTime();
 
+    // -------------------------
+    // MODO WEB
+    // -------------------------
     if (Platform.OS === "web") {
       const lista = await this.getAll();
+
+      // Validar duplicados
       const existe = lista.find(
-        (u) => u.email === email || u.username === username
+        (u) => u.email === email.trim() || u.username === username.trim()
       );
       if (existe) throw new Error("Datos duplicados");
 
@@ -101,9 +108,13 @@ class DatabaseService {
 
       lista.unshift(nuevo);
       localStorage.setItem(this.storageKeyUsers, JSON.stringify(lista));
+
       return nuevo;
     }
 
+    // -------------------------
+    // MODO APP / SQLITE
+    // -------------------------
     try {
       const result = await this.db.runAsync(
         "INSERT INTO usuarios(nombre, email, username, password, fecha_creacion) VALUES (?, ?, ?, ?, ?);",
@@ -123,6 +134,7 @@ class DatabaseService {
     }
   }
 
+  // LOGIN
   async getUserEmailPassword(email, password) {
     await this.initialize();
 
@@ -130,52 +142,58 @@ class DatabaseService {
       const lista = await this.getAll();
       return (
         lista.find(
-          (u) => u.email === email.trim() && u.password === password
+          (u) =>
+            u.email === email.trim().toLowerCase() &&
+            u.password === password.trim()
         ) || null
       );
     }
 
     const rows = await this.db.getAllAsync(
       "SELECT * FROM usuarios WHERE email = ? AND password = ? LIMIT 1;",
-      [email.trim(), password]
+      [email.trim().toLowerCase(), password.trim()]
     );
 
     return rows.length > 0 ? rows[0] : null;
   }
 
+  // RECUPERAR POR EMAIL
   async getUserByEmail(email) {
     await this.initialize();
 
     if (Platform.OS === "web") {
       const lista = await this.getAll();
-      return lista.find((u) => u.email === email.trim()) || null;
+      return lista.find((u) => u.email === email.trim().toLowerCase()) || null;
     }
 
     const rows = await this.db.getAllAsync(
       "SELECT * FROM usuarios WHERE email = ? LIMIT 1;",
-      [email.trim()]
+      [email.trim().toLowerCase()]
     );
 
     return rows.length > 0 ? rows[0] : null;
   }
 
-  async updateUserPasswordByEmail(email, pass) {
+  // CAMBIO DE CONTRASEÑA
+  async updateUserPasswordByEmail(email, newPass) {
     await this.initialize();
 
     if (Platform.OS === "web") {
       const lista = await this.getAll();
-      const idx = lista.findIndex((u) => u.email === email.trim());
+      const idx = lista.findIndex(
+        (u) => u.email === email.trim().toLowerCase()
+      );
       if (idx === -1) return null;
 
-      lista[idx].password = pass;
-
+      lista[idx].password = newPass;
       localStorage.setItem(this.storageKeyUsers, JSON.stringify(lista));
+
       return true;
     }
 
     return await this.db.runAsync(
       "UPDATE usuarios SET password = ? WHERE email = ?;",
-      [pass, email.trim()]
+      [newPass, email.trim().toLowerCase()]
     );
   }
 }
