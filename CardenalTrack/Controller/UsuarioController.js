@@ -67,4 +67,3 @@ export class UsuarioController {
         // Ejecuta todos los listeners registrados
     }
 }
-
