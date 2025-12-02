@@ -1,14 +1,7 @@
 import React, { useState } from 'react';
-import {
-  View,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  StyleSheet,
-  Image,
-} from 'react-native';
+import {View, Text, TextInput, TouchableOpacity, StyleSheet, Image,} from 'react-native';
 
-export default function   InicioDeSesion() {
+export default function   InicioDeSesion({navigation}) {
   const [correo, setCorreo] = useState('');
   const [contrasena, setContrasena] = useState('');
 
@@ -25,7 +18,7 @@ export default function   InicioDeSesion() {
       {/* Logo */}
       <View style={styles.logoContainer}>
         <Image
-          source={require('../assets/icon.png')} // usa el icono existente en assets
+          source={require('../assets/LogoCardenal.png')} // usa el icono existente en assets
           style={styles.logo}
         />
         <Text style={styles.appName}>CardenalTrak</Text>
@@ -55,7 +48,7 @@ export default function   InicioDeSesion() {
           onChangeText={setContrasena}
         />
 
-        <TouchableOpacity>
+        <TouchableOpacity onPress={() => navigation.navigate("RecuperarContraseña")}>
           <Text style={styles.forgotPassword}>¿Olvidaste tu contraseña?</Text>
         </TouchableOpacity>
 
@@ -67,7 +60,7 @@ export default function   InicioDeSesion() {
       {/* Registro */}
       <View style={styles.registerContainer}>
         <Text style={styles.registerText}>¿No tienes una cuenta? </Text>
-        <TouchableOpacity>
+        <TouchableOpacity onPress={() => navigation.navigate("Registro")}> 
           <Text style={styles.registerLink}>Regístrate</Text>
         </TouchableOpacity>
       </View>

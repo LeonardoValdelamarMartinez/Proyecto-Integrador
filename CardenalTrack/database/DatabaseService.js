@@ -1,4 +1,3 @@
-// database/DatabaseService.js
 import { Platform } from "react-native";
 import * as SQLite from "expo-sqlite";
 
@@ -11,9 +10,8 @@ class DatabaseService {
     this.storageKeyUsers = "usuarios";
   }
 
-  // =========================
+
   // FECHA FORMATO MÉXICO
-  // =========================
   getNowMexicoDateTime() {
     try {
       const formatter = new Intl.DateTimeFormat("sv-SE", {
@@ -44,9 +42,8 @@ class DatabaseService {
     return this.currentUserId;
   }
 
-  // =========================
+
   // INICIALIZACIÓN SOLO TABLA USUARIOS
-  // =========================
   async initialize() {
     if (Platform.OS === "web") return;
     if (this.db) return;
@@ -64,13 +61,22 @@ class DatabaseService {
         password TEXT NOT NULL,
         fecha_creacion TEXT
       );
+
+      -- NUEVA TABLA PARA INCIDENCIAS/REPORTES
+      CREATE TABLE IF NOT EXISTS incidencias (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER NOT NULL,
+        titulo TEXT NOT NULL,
+        descripcion TEXT NOT NULL,
+        sector TEXT, 
+        estado TEXT NOT NULL DEFAULT 'Pendientes', -- Valores: Pendientes, En Proceso, Resueltos
+        fecha TEXT,
+        FOREIGN KEY (user_id) REFERENCES usuarios(id)
+      );
     `);
   }
 
-  // =========================
   // USUARIOS
-  // =========================
-
   async getAll() {
     if (Platform.OS === "web") {
       const data = localStorage.getItem(this.storageKeyUsers);
@@ -85,9 +91,8 @@ class DatabaseService {
     await this.initialize();
     const fechaMX = this.getNowMexicoDateTime();
 
-    // -------------------------
+
     // MODO WEB
-    // -------------------------
     if (Platform.OS === "web") {
       const lista = await this.getAll();
 
@@ -195,6 +200,60 @@ class DatabaseService {
       "UPDATE usuarios SET password = ? WHERE email = ?;",
       [newPass, email.trim().toLowerCase()]
     );
+  }
+
+  // =========================
+  // INCIDENCIAS / REPORTES
+  // =========================
+
+  async crearIncidencia(userId, titulo, descripcion) {
+    await this.initialize();
+    const fechaMX = this.getNowMexicoDateTime();
+    const sector = 'General'; // Valor por defecto
+    const estado = 'Pendientes'; // Valor por defecto
+
+    if (Platform.OS === "web") {
+      // Manejo para web (simplificado para no usar localstorage)
+      console.log('Crear Incidencia (Web mode)');
+      return null;
+    }
+
+    try {
+      const result = await this.db.runAsync(
+        "INSERT INTO incidencias(user_id, titulo, descripcion, sector, estado, fecha) VALUES (?, ?, ?, ?, ?, ?);",
+        [userId, titulo, descripcion, sector, estado, fechaMX]
+      );
+      return result.lastInsertRowId;
+    } catch (e) {
+      console.error("Error al crear incidencia:", e);
+      throw new Error("No se pudo crear la incidencia");
+    }
+  }
+  
+  // Usada por PantallaSeguimiento.js
+  async getIncidenciasByUser(userId) {
+    await this.initialize();
+
+    if (Platform.OS === "web") {
+      return [];
+    }
+    
+    return await this.db.getAllAsync(
+      "SELECT * FROM incidencias WHERE user_id = ? ORDER BY id DESC;",
+      [userId]
+    );
+  }
+
+  // Usada por LIstaIncidecncias.js
+  async getAllReportes() {
+    await this.initialize();
+
+    if (Platform.OS === "web") {
+      return [];
+    }
+    
+    // Asume que esta función debe devolver todos los reportes, sin filtro de usuario
+    return await this.db.getAllAsync("SELECT * FROM incidencias ORDER BY id DESC;");
   }
 }
 

@@ -1,93 +1,57 @@
-import React from "react";
-import { NavigationContainer } from "@react-navigation/native";
-import { createNativeStackNavigator } from "@react-navigation/native-stack";
-import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
-import { Ionicons } from "@expo/vector-icons";
+import React from 'react';
+import { NavigationContainer } from '@react-navigation/native';
+import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import { Ionicons } from '@expo/vector-icons';
 
-// Screens
-import InicioSesion from "./INTERFACES/InicioDeSesion";
-import Registro from "./INTERFACES/PantallaDeRegistro";
-
-
-
+// Importa las pantallas que has subido
+import InicioDeSesion from './INTERFACES/InicioDeSesion';
+import Registro from './INTERFACES/PantallaDeRegistro';
+import RecuperarContraseña from './INTERFACES/OlvidarContrasena'; // El componente se llama RecuperarContraseña
+import PantallaSeguimiento from './INTERFACES/PantallaSeguimiento';
+import MisReportesScreen from './INTERFACES/LIstaIncidecncias';
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
 
-const COLOR_PRIMARY = "#BD0A0A";
-const COLOR_INACTIVE = "#777";
-
+// Navegador de Pestañas (Main App)
 function MainTabs() {
   return (
     <Tab.Navigator
       screenOptions={({ route }) => ({
         headerShown: false,
-        tabBarShowLabel: false,
-        tabBarStyle: {
-          height: 62,
-          borderTopWidth: 0,
-          backgroundColor: "#fff",
-          elevation: 10,
-          paddingBottom: 8,
-          paddingTop: 8,
-        },
-
         tabBarIcon: ({ focused, color, size }) => {
-          let iconName = "home-outline";
-
-          if (route.name === "Home") iconName = focused ? "home" : "home-outline";
-          if (route.name === "Transacciones")
-            iconName = focused ? "add-circle" : "add-circle-outline";
-          if (route.name === "Presupuestos")
-            iconName = focused ? "wallet" : "wallet-outline";
-          if (route.name === "Graficas")
-            iconName = focused ? "stats-chart" : "stats-chart-outline";
-          if (route.name === "Actividad")
-            iconName = focused ? "time" : "time-outline";
-
-          return (
-            <Ionicons
-              name={iconName}
-              size={focused ? 30 : 26}
-              color={focused ? COLOR_PRIMARY : COLOR_INACTIVE}
-            />
-          );
+          let iconName;
+          if (route.name === 'Seguimiento') {
+            iconName = focused ? 'document-text' : 'document-text-outline';
+          } else if (route.name === 'Mis Reportes') {
+            iconName = focused ? 'list-sharp' : 'list-outline';
+          }
+          // Puedes agregar más iconos para otros elementos del Navbar
+          return <Ionicons name={iconName} size={size} color={color} />;
         },
+        tabBarActiveTintColor: '#B71C1C', // Color principal de tu app
+        tabBarInactiveTintColor: 'gray',
       })}
     >
-      <Tab.Screen name="Home" component={HomeScreen} />
-      <Tab.Screen name="Transacciones" component={Transacciones} />
-      <Tab.Screen name="Presupuestos" component={Presupuestos} />
-      <Tab.Screen name="Graficas" component={Graficas} />
-      <Tab.Screen name="Actividad" component={ActividadScreen} />
+      <Tab.Screen name="Seguimiento" component={PantallaSeguimiento} />
+      <Tab.Screen name="Mis Reportes" component={MisReportesScreen} />
     </Tab.Navigator>
   );
 }
 
+// Navegador Principal (Stack: Auth + Main App)
 export default function App() {
   return (
     <NavigationContainer>
       <Stack.Navigator initialRouteName="InicioSesion">
-        <Stack.Screen
-          name="InicioSesion"
-          component={InicioSesion}
-          options={{ headerShown: false }}
-        />
-
-        <Stack.Screen
-          name="Registro"
-          component={Registro}
-          options={{ headerShown: false }}
-        />
-
-
-
-        {/* Tabs principales */}
-        <Stack.Screen
-          name="MainTabs"
-          component={MainTabs}
-          options={{ headerShown: false }}
-        />
+        {/* Flujo de Autenticación */}
+        <Stack.Screen name="InicioSesion" component={InicioDeSesion} options={{ headerShown: false }} />
+        <Stack.Screen name="Registro" component={Registro} options={{ title: 'Crear Cuenta' }} />
+        <Stack.Screen name="RecuperarContraseña" component={RecuperarContraseña} options={{ title: 'Recuperar Contraseña' }} />
+        
+        {/* Una vez logueado, navega a MainApp */}
+        <Stack.Screen name="MainApp" component={MainTabs} options={{ headerShown: false }} /> 
       </Stack.Navigator>
     </NavigationContainer>
   );
