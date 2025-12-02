@@ -1,15 +1,5 @@
-// screens/ConfirmationScreen.js - VERSIÓN ACTUALIZADA CON BASE DE DATOS
 import React, { useEffect, useState } from 'react';
-import {
-  SafeAreaView,
-  ScrollView,
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-  StatusBar,
-  ActivityIndicator,
-} from 'react-native';
+import {SafeAreaView, ScrollView, View, Text, StyleSheet, TouchableOpacity, StatusBar, ActivityIndicator} from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import DatabaseService from '../database/DatabaseService';
 

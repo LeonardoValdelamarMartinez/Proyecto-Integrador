@@ -1,20 +1,5 @@
-// screens/ProfileScreen.js - VERSIÓN UNIFICADA
 import React, { useEffect, useState, useCallback } from 'react';
-import {
-  SafeAreaView,
-  ScrollView,
-  View,
-  Text,
-  TextInput,
-  StyleSheet,
-  TouchableOpacity,
-  StatusBar,
-  ActivityIndicator,
-  RefreshControl,
-  Alert,
-  KeyboardAvoidingView,
-  Platform,
-} from 'react-native';
+import {SafeAreaView, ScrollView, View, Text, TextInput, StyleSheet, TouchableOpacity, StatusBar, ActivityIndicator, RefreshControl, Alert, KeyboardAvoidingView, Platform} from 'react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import DatabaseService from '../database/DatabaseService';
@@ -22,7 +7,6 @@ import DatabaseService from '../database/DatabaseService';
 const ProfileScreen = () => {
   const navigation = useNavigation();
   
-  // Estados
   const [userData, setUserData] = useState(null);
   const [reportStats, setReportStats] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -38,7 +22,6 @@ const ProfileScreen = () => {
   const [formErrors, setFormErrors] = useState({});
   const [saving, setSaving] = useState(false);
 
-  // Función para cargar los datos del perfil
   const loadProfileData = useCallback(async () => {
     try {
       setLoading(true);
@@ -47,11 +30,10 @@ const ProfileScreen = () => {
       const currentUserId = DatabaseService.getCurrentUserId();
       
       if (!currentUserId) {
-        navigation.navigate('Login');
+        navigation.navigate('InicioSesion');
         return;
       }
 
-      // Obtener datos del usuario
       const user = await DatabaseService.getUserById(currentUserId);
       
       if (!user) {
@@ -59,7 +41,6 @@ const ProfileScreen = () => {
         return;
       }
 
-      // Obtener estadísticas de reportes
       const stats = await DatabaseService.getDetailedReportStats(currentUserId);
 
       const userProfile = {
@@ -75,7 +56,6 @@ const ProfileScreen = () => {
 
       setUserData(userProfile);
       
-      // Inicializar formulario con datos actuales
       setFormData({
         nombre: user.nombre || '',
         facultad: user.facultad || '',
@@ -99,12 +79,10 @@ const ProfileScreen = () => {
     }
   }, [navigation]);
 
-  // Cargar datos al montar la pantalla
   useEffect(() => {
     loadProfileData();
   }, [loadProfileData]);
 
-  // Recargar datos cuando la pantalla recibe foco
   useFocusEffect(
     useCallback(() => {
       if (!isEditing) {
@@ -113,13 +91,11 @@ const ProfileScreen = () => {
     }, [loadProfileData, isEditing])
   );
 
-  // Función para manejar el refresh
   const onRefresh = useCallback(() => {
     setRefreshing(true);
     loadProfileData();
   }, [loadProfileData]);
 
-  // Función para manejar cambios en el formulario
   const handleInputChange = (field, value) => {
     setFormData(prev => ({ ...prev, [field]: value }));
     if (formErrors[field]) {
@@ -127,7 +103,6 @@ const ProfileScreen = () => {
     }
   };
 
-  // Validar formulario
   const validateForm = () => {
     const newErrors = {};
 
@@ -151,7 +126,6 @@ const ProfileScreen = () => {
     return Object.keys(newErrors).length === 0;
   };
 
-  // Guardar cambios del perfil
   const handleSaveProfile = async () => {
     if (!validateForm()) {
       Alert.alert('Error', 'Por favor, completa todos los campos requeridos');
@@ -176,7 +150,6 @@ const ProfileScreen = () => {
       });
 
       if (updatedUser) {
-        // Actualizar datos locales
         const updatedUserData = {
           ...userData,
           name: formData.nombre.trim(),
@@ -203,9 +176,7 @@ const ProfileScreen = () => {
     }
   };
 
-  // Cancelar edición
   const handleCancelEdit = () => {
-    // Restaurar datos originales
     if (userData) {
       setFormData({
         nombre: userData.name,
@@ -218,7 +189,6 @@ const ProfileScreen = () => {
     setIsEditing(false);
   };
 
-  // Función para cerrar sesión
   const handleLogout = () => {
     Alert.alert(
       'Cerrar sesión',
@@ -231,24 +201,27 @@ const ProfileScreen = () => {
         {
           text: 'Cerrar sesión',
           style: 'destructive',
-          onPress: () => {
-            DatabaseService.logout();
-            navigation.reset({
-              index: 0,
-              routes: [{ name: 'Login' }],
-            });
+          onPress: async () => {
+            try {
+              await DatabaseService.logout();
+              navigation.reset({
+                index: 0,
+                routes: [{ name: 'InicioSesion' }],
+              });
+            } catch (error) {
+              console.error('Error en logout:', error);
+              Alert.alert('Error', 'No se pudo cerrar sesión');
+            }
           },
         },
       ]
     );
   };
 
-  // Función para ver reportes
   const handleViewReports = () => {
-    navigation.navigate('MyReports');
+    navigation.navigate('MisReportes');
   };
 
-  // Renderizar sección de información personal (modo visualización o edición)
   const renderPersonalInfoSection = () => {
     if (isEditing) {
       return (
@@ -365,7 +338,6 @@ const ProfileScreen = () => {
     );
   };
 
-  // Renderizar contenido principal
   const renderContent = () => {
     if (loading && !refreshing) {
       return (
@@ -389,7 +361,7 @@ const ProfileScreen = () => {
           </TouchableOpacity>
           <TouchableOpacity 
             style={styles.loginButton}
-            onPress={() => navigation.navigate('Login')}
+            onPress={() => navigation.navigate('InicioSesion')}
           >
             <Text style={styles.loginButtonText}>Iniciar sesión</Text>
           </TouchableOpacity>
@@ -403,7 +375,7 @@ const ProfileScreen = () => {
           <Text style={styles.errorText}>No se encontraron datos del usuario</Text>
           <TouchableOpacity 
             style={styles.loginButton}
-            onPress={() => navigation.navigate('Login')}
+            onPress={() => navigation.navigate('InicioSesion')}
           >
             <Text style={styles.loginButtonText}>Iniciar sesión</Text>
           </TouchableOpacity>
@@ -428,7 +400,6 @@ const ProfileScreen = () => {
             />
           }
         >
-          {/* Encabezado */}
           <View style={styles.header}>
             <View style={styles.profileHeader}>
               <View style={styles.avatarContainer}>
@@ -450,9 +421,7 @@ const ProfileScreen = () => {
             <View style={styles.headerDivider} />
           </View>
 
-          {/* Contenido principal */}
           <View style={styles.content}>
-            {/* Sección de Estadísticas */}
             <View style={styles.section}>
               <Text style={styles.sectionTitle}>Estadísticas</Text>
               <View style={styles.statsContainer}>
@@ -481,10 +450,8 @@ const ProfileScreen = () => {
               )}
             </View>
 
-            {/* Sección de Información Personal */}
             {renderPersonalInfoSection()}
 
-            {/* Botones de acción */}
             {!isEditing && (
               <View style={styles.actionButtons}>
                 <TouchableOpacity 
@@ -517,12 +484,11 @@ const ProfileScreen = () => {
       <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
       {renderContent()}
 
-      {/* Barra de navegación inferior (solo en modo visualización) */}
       {!isEditing && (
         <View style={styles.bottomNav}>
           <TouchableOpacity 
             style={styles.navItem}
-            onPress={() => navigation.navigate('Home')}
+            onPress={() => navigation.navigate('Dashboard')}
             disabled={loading}
           >
             <Icon name="home" size={24} color="#1a237e" />
@@ -540,7 +506,7 @@ const ProfileScreen = () => {
           
           <TouchableOpacity 
             style={styles.navItem}
-            onPress={() => navigation.navigate('Tracking')}
+            onPress={() => navigation.navigate('Seguimiento')}
             disabled={loading}
           >
             <Icon name="track-changes" size={24} color="#1a237e" />
@@ -549,7 +515,7 @@ const ProfileScreen = () => {
           
           <TouchableOpacity 
             style={styles.navItem}
-            onPress={() => navigation.navigate('Profile')}
+            onPress={() => navigation.navigate('Perfil')}
             disabled={loading}
           >
             <Icon name="person" size={24} color="#1a237e" />
@@ -795,7 +761,6 @@ const styles = StyleSheet.create({
     height: 1,
     backgroundColor: '#e0e0e0',
   },
-  // Estilos para el formulario de edición
   editFormCard: {
     backgroundColor: '#f5f5f5',
     borderRadius: 12,
@@ -870,7 +835,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
   },
-  // Botones de acción principales
   actionButtons: {
     gap: 12,
   },
@@ -898,7 +862,6 @@ const styles = StyleSheet.create({
   logoutText: {
     color: '#d32f2f',
   },
-  // Navegación inferior
   bottomNav: {
     flexDirection: 'row',
     backgroundColor: '#ffffff',

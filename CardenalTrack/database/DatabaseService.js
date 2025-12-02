@@ -8,8 +8,8 @@ class DatabaseService {
 
     // Para Web
     this.storageKeyUsers = "usuarios";
+    this.storageKeyCurrentUser = "currentUser";
   }
-
 
   // FECHA FORMATO MÉXICO
   getNowMexicoDateTime() {
@@ -36,14 +36,27 @@ class DatabaseService {
 
   setCurrentUser(user) {
     this.currentUserId = user ? user.id : null;
+    if (Platform.OS === "web" && user) {
+      localStorage.setItem(this.storageKeyCurrentUser, JSON.stringify(user));
+    }
   }
 
   getCurrentUserId() {
+    if (Platform.OS === "web" && !this.currentUserId) {
+      try {
+        const stored = localStorage.getItem(this.storageKeyCurrentUser);
+        if (stored) {
+          const user = JSON.parse(stored);
+          this.currentUserId = user.id;
+        }
+      } catch (e) {
+        console.error("Error al recuperar usuario de localStorage:", e);
+      }
+    }
     return this.currentUserId;
   }
 
-
-  // INICIALIZACIÓN SOLO TABLA USUARIOS
+  // INICIALIZACIÓN
   async initialize() {
     if (Platform.OS === "web") return;
     if (this.db) return;
@@ -59,17 +72,19 @@ class DatabaseService {
         email TEXT UNIQUE NOT NULL,
         username TEXT UNIQUE NOT NULL,
         password TEXT NOT NULL,
-        fecha_creacion TEXT
+        fecha_creacion TEXT,
+        facultad TEXT,
+        matricula TEXT,
+        semestre TEXT
       );
 
-      -- NUEVA TABLA PARA INCIDENCIAS/REPORTES
       CREATE TABLE IF NOT EXISTS incidencias (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         user_id INTEGER NOT NULL,
         titulo TEXT NOT NULL,
         descripcion TEXT NOT NULL,
         sector TEXT, 
-        estado TEXT NOT NULL DEFAULT 'Pendientes', -- Valores: Pendientes, En Proceso, Resueltos
+        estado TEXT NOT NULL DEFAULT 'Pendientes',
         fecha TEXT,
         FOREIGN KEY (user_id) REFERENCES usuarios(id)
       );
@@ -91,12 +106,9 @@ class DatabaseService {
     await this.initialize();
     const fechaMX = this.getNowMexicoDateTime();
 
-
-    // MODO WEB
     if (Platform.OS === "web") {
       const lista = await this.getAll();
 
-      // Validar duplicados
       const existe = lista.find(
         (u) => u.email === email.trim() || u.username === username.trim()
       );
@@ -117,7 +129,6 @@ class DatabaseService {
       return nuevo;
     }
 
-    // MODO APP / SQLITE
     try {
       const result = await this.db.runAsync(
         "INSERT INTO usuarios(nombre, email, username, password, fecha_creacion) VALUES (?, ?, ?, ?, ?);",
@@ -200,15 +211,108 @@ class DatabaseService {
     );
   }
 
-  // INCIDENCIAS / REPORTES
+  // Obtener usuario por ID
+  async getUserById(userId) {
+    await this.initialize();
+
+    if (Platform.OS === "web") {
+      const lista = await this.getAll();
+      return lista.find((u) => u.id === userId) || null;
+    }
+
+    const rows = await this.db.getAllAsync(
+      "SELECT * FROM usuarios WHERE id = ? LIMIT 1;",
+      [userId]
+    );
+
+    return rows.length > 0 ? rows[0] : null;
+  }
+
+  // Obtener estadísticas de reportes
+  async getDetailedReportStats(userId) {
+    await this.initialize();
+
+    if (Platform.OS === "web") {
+      return {
+        total: 0,
+        pendientes: 0,
+        enProceso: 0,
+        resueltos: 0
+      };
+    }
+
+    const stats = await this.db.getAllAsync(`
+      SELECT 
+        estado,
+        COUNT(*) as cantidad
+      FROM incidencias 
+      WHERE user_id = ?
+      GROUP BY estado;
+    `, [userId]);
+
+    const result = {
+      total: 0,
+      pendientes: 0,
+      enProceso: 0,
+      resueltos: 0
+    };
+
+    stats.forEach(stat => {
+      result.total += stat.cantidad;
+      if (stat.estado === 'Pendientes') result.pendientes = stat.cantidad;
+      if (stat.estado === 'En Proceso') result.enProceso = stat.cantidad;
+      if (stat.estado === 'Resueltos') result.resueltos = stat.cantidad;
+    });
+
+    return result;
+  }
+
+  // Actualizar perfil de usuario
+  async updateUserProfile(userId, profileData) {
+    await this.initialize();
+
+    if (Platform.OS === "web") {
+      const lista = await this.getAll();
+      const idx = lista.findIndex((u) => u.id === userId);
+      if (idx === -1) return null;
+
+      lista[idx] = { ...lista[idx], ...profileData };
+      localStorage.setItem(this.storageKeyUsers, JSON.stringify(lista));
+      return lista[idx];
+    }
+
+    try {
+      await this.db.runAsync(
+        `UPDATE usuarios SET 
+          nombre = ?,
+          facultad = ?,
+          matricula = ?,
+          semestre = ?
+        WHERE id = ?;`,
+        [
+          profileData.nombre,
+          profileData.facultad,
+          profileData.matricula,
+          profileData.semestre,
+          userId
+        ]
+      );
+
+      return await this.getUserById(userId);
+    } catch (e) {
+      console.error("Error al actualizar perfil:", e);
+      throw new Error("No se pudo actualizar el perfil");
+    }
+  }
+
+  // INCIDENCIAS
   async crearIncidencia(userId, titulo, descripcion) {
     await this.initialize();
     const fechaMX = this.getNowMexicoDateTime();
-    const sector = 'General'; // Valor por defecto
-    const estado = 'Pendientes'; // Valor por defecto
+    const sector = 'General';
+    const estado = 'Pendientes';
 
     if (Platform.OS === "web") {
-      // Manejo para web (simplificado para no usar localstorage)
       console.log('Crear Incidencia (Web mode)');
       return null;
     }
@@ -225,7 +329,6 @@ class DatabaseService {
     }
   }
   
-  // Usada por PantallaSeguimiento.js
   async getIncidenciasByUser(userId) {
     await this.initialize();
 
@@ -239,7 +342,6 @@ class DatabaseService {
     );
   }
 
-  // Usada por LIstaIncidecncias.js
   async getAllReportes() {
     await this.initialize();
 
@@ -247,8 +349,35 @@ class DatabaseService {
       return [];
     }
     
-    // Asume que esta función debe devolver todos los reportes, sin filtro de usuario
     return await this.db.getAllAsync("SELECT * FROM incidencias ORDER BY id DESC;");
+  }
+
+  // GENERAR ID DE REPORTE
+  generateReportId() {
+    const fecha = new Date();
+    const year = fecha.getFullYear();
+    const month = String(fecha.getMonth() + 1).padStart(2, '0');
+    const day = String(fecha.getDate()).padStart(2, '0');
+    const random = Math.floor(Math.random() * 1000).toString().padStart(3, '0');
+    return `#INC-${year}${month}${day}-${random}`;
+  }
+
+  // LOGOUT
+  logout() {
+    console.log('Ejecutando logout...');
+    this.currentUserId = null;
+    
+    if (Platform.OS === "web") {
+      try {
+        localStorage.removeItem(this.storageKeyCurrentUser);
+        console.log('Usuario removido de localStorage');
+      } catch (error) {
+        console.error('Error al limpiar localStorage:', error);
+      }
+    }
+    
+    console.log('Logout completado');
+    return Promise.resolve();
   }
 }
 
