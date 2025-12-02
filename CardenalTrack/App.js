@@ -5,9 +5,9 @@ import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { Ionicons } from "@expo/vector-icons";
 
 // Screens
-import InicioSesion from "./Screens/InicioDeSesion";
-import Registro from "./Screens/Registro";
-import RecuperarContraseña from "./Screens/RecuperarContraseña";
+import InicioSesion from "./INTERFACES/InicioDeSesion";
+import Registro from "./INTERFACES/PantallaDeRegistro";
+
 
 
 
@@ -80,11 +80,7 @@ export default function App() {
           options={{ headerShown: false }}
         />
 
-        <Stack.Screen
-          name="RecuperarContraseña"
-          component={RecuperarContraseña}
-          options={{ headerShown: false }}
-        />
+
 
         {/* Tabs principales */}
         <Stack.Screen

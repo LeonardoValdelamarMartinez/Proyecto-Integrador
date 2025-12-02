@@ -1,198 +1,214 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from 'react';
 import {
-  Alert,
-  SafeAreaView,
-  ScrollView,
-  StyleSheet,
+  View,
   Text,
   TextInput,
   TouchableOpacity,
+  StyleSheet,
   Image,
-} from "react-native";
+} from 'react-native';
 
-import DatabaseService from "../database/DatabaseService";
+export default function   InicioDeSesion() {
+  const [correo, setCorreo] = useState('');
+  const [contrasena, setContrasena] = useState('');
 
-const Logo = require("../assets/LogoCardenal.png");
-
-export default function InicioSesion({ navigation }) {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-
-  useEffect(() => {
-    DatabaseService.initialize();
-  }, []);
-
-  const onContinue = async () => {
-    if (!email.trim() || !password.trim()) {
-      Alert.alert("Campo vacío", "Ingresa tu correo y contraseña.");
+  const handleLogin = () => {
+    if (!correo || !contrasena) {
+      alert('Por favor completa todos los campos');
       return;
     }
-
-    try {
-      const user = await DatabaseService.getUserEmailPassword(
-        email.trim(),
-        password.trim()
-      );
-
-      if (!user) {
-        Alert.alert("Error", "Correo o contraseña incorrectos");
-        return;
-      }
-
-      DatabaseService.setCurrentUser(user);
-      navigation.replace("MainTabs");
-    } catch (error) {
-      console.log(error);
-      Alert.alert("Error", "No se pudo validar tu cuenta.");
-    }
-  };
-
-  const goRecuperar = () => {
-    navigation.navigate("RecuperarContraseña");
-  };
-
-  const goRegistro = () => {
-    navigation.navigate("Registro");
+    alert(`Inicio de sesión con:\nCorreo: ${correo}`);
   };
 
   return (
-    <SafeAreaView style={styles.container}>
-      <ScrollView contentContainerStyle={styles.scroll}>
-        
-        {/* LOGO */}
-        <Image source={Logo} style={styles.logo} />
+    <View style={styles.container}>
+      {/* Logo */}
+      <View style={styles.logoContainer}>
+        <Image
+          source={require('../assets/icon.png')} // usa el icono existente en assets
+          style={styles.logo}
+        />
+        <Text style={styles.appName}>CardenalTrak</Text>
+      </View>
 
-        <Text style={styles.title}>CardenalTrak</Text>
-        <Text style={styles.subtitle}>Inicia sesión para continuar</Text>
+      {/* Card principal */}
+      <View style={styles.card}>
+        <Text style={styles.title}>Iniciar Sesión</Text>
 
-        {/* CORREO */}
-        <Text style={styles.label}>Correo electrónico</Text>
+        <Text style={styles.label}>Correo Institucional</Text>
         <TextInput
           style={styles.input}
-          placeholder="correo@dominio.com"
-          placeholderTextColor="#999"
+          placeholder="usuario@ejemplo.edu.mx"
+          placeholderTextColor="#A0A0A0"
           keyboardType="email-address"
-          autoCapitalize="none"
-          value={email}
-          onChangeText={setEmail}
+          value={correo}
+          onChangeText={setCorreo}
         />
 
-        {/* CONTRASEÑA */}
         <Text style={styles.label}>Contraseña</Text>
         <TextInput
           style={styles.input}
-          placeholder="*************"
-          placeholderTextColor="#999"
+          placeholder="••••••••"
+          placeholderTextColor="#A0A0A0"
           secureTextEntry
-          value={password}
-          onChangeText={setPassword}
+          value={contrasena}
+          onChangeText={setContrasena}
         />
 
-        {/* BOTÓN INICIAR SESIÓN */}
-        <TouchableOpacity style={styles.primaryBtn} onPress={onContinue}>
-          <Text style={styles.primaryText}>Iniciar Sesión</Text>
+        <TouchableOpacity>
+          <Text style={styles.forgotPassword}>¿Olvidaste tu contraseña?</Text>
         </TouchableOpacity>
 
-        {/* OPCIÓN PARA RECUPERAR CONTRASEÑA */}
-        <TouchableOpacity onPress={goRecuperar}>
-          <Text style={styles.recoverText}>¿Olvidaste tu contraseña?</Text>
+        <TouchableOpacity style={styles.button} onPress={handleLogin}>
+          <Text style={styles.buttonText}>Ingresar</Text>
         </TouchableOpacity>
+      </View>
 
-        {/* REGISTRO */}
-        <TouchableOpacity style={styles.secondaryBtn} onPress={goRegistro}>
-          <Text style={styles.secondaryText}>Crear una cuenta</Text>
+      {/* Registro */}
+      <View style={styles.registerContainer}>
+        <Text style={styles.registerText}>¿No tienes una cuenta? </Text>
+        <TouchableOpacity>
+          <Text style={styles.registerLink}>Regístrate</Text>
         </TouchableOpacity>
+      </View>
 
-      </ScrollView>
-    </SafeAreaView>
+      {/* Separador */}
+      <View style={styles.separatorContainer}>
+        <View style={styles.line} />
+        <Text style={styles.separatorText}>o continúa con</Text>
+        <View style={styles.line} />
+      </View>
+
+      {/* Botones de terceros */}
+      <View style={styles.socialContainer}>
+        <TouchableOpacity style={styles.socialButton}>
+          <Text style={styles.socialText}>Google</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.socialButton}>
+          <Text style={styles.socialText}>Microsoft</Text>
+        </TouchableOpacity>
+      </View>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#fff" },
-
-  scroll: {
-    flexGrow: 1,
-    alignItems: "center",
-    paddingHorizontal: 28,
-    justifyContent: "center",
+  container: {
+    flex: 1,
+    backgroundColor: '#F2F2F2',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 20,
   },
-
-  logo: {
-    width: 110,
-    height: 110,
-    resizeMode: "contain",
+  logoContainer: {
+    alignItems: 'center',
     marginBottom: 10,
   },
-
+  logo: {
+    width: 50,
+    height: 50,
+    marginBottom: 5,
+  },
+  appName: {
+    fontSize: 22,
+    fontWeight: 'bold',
+    color: '#B71C1C',
+  },
+  card: {
+    backgroundColor: '#fff',
+    borderRadius: 15,
+    padding: 25,
+    width: '100%',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOpacity: 0.1,
+    shadowOffset: { width: 0, height: 4 },
+    shadowRadius: 6,
+    elevation: 5,
+  },
   title: {
-    fontSize: 30,
-    color: "#BD0A0A",
-    fontWeight: "bold",
-    textAlign: "center",
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#B71C1C',
+    marginBottom: 15,
   },
-
-  subtitle: {
-    fontSize: 15,
-    color: "#333",
-    textAlign: "center",
-    marginBottom: 24,
-  },
-
   label: {
-    width: "100%",
-    fontSize: 15,
-    fontWeight: "600",
-    color: "#222",
-    marginTop: 12,
-    marginBottom: 6,
+    alignSelf: 'flex-start',
+    fontWeight: '600',
+    marginTop: 10,
+    marginBottom: 5,
+    color: '#333',
   },
-
   input: {
-    width: "100%",
-    height: 48,
-    borderRadius: 10,
+    width: '100%',
+    backgroundColor: '#fff',
     borderWidth: 1,
-    borderColor: "#ccc",
+    borderColor: '#ccc',
+    borderRadius: 8,
     paddingHorizontal: 12,
-    backgroundColor: "#F5F5F5",
-    fontSize: 15,
+    paddingVertical: 8,
   },
-
-  primaryBtn: {
-    width: "60%",
-    backgroundColor: "#BD0A0A",
+  forgotPassword: {
+    color: '#B71C1C',
+    fontSize: 13,
+    textDecorationLine: 'underline',
+    alignSelf: 'flex-end',
+    marginTop: 8,
+    marginBottom: 15,
+  },
+  button: {
+    backgroundColor: '#B71C1C',
+    width: '100%',
     paddingVertical: 12,
     borderRadius: 8,
-    alignItems: "center",
-    marginTop: 26,
+    alignItems: 'center',
   },
-
-  primaryText: {
-    color: "#fff",
-    fontSize: 18,
-    fontWeight: "600",
+  buttonText: {
+    color: '#fff',
+    fontWeight: 'bold',
+    fontSize: 16,
   },
-
-  recoverText: {
-    marginTop: 14,
-    color: "#BD0A0A",
-    fontSize: 15,
-    textDecorationLine: "underline",
+  registerContainer: {
+    flexDirection: 'row',
+    marginTop: 20,
   },
-
-  secondaryBtn: {
-    width: "60%",
-    backgroundColor: "#F4DDDD",
-    paddingVertical: 12,
+  registerText: {
+    color: '#333',
+  },
+  registerLink: {
+    color: '#B71C1C',
+    fontWeight: 'bold',
+  },
+  separatorContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginVertical: 15,
+  },
+  line: {
+    flex: 1,
+    height: 1,
+    backgroundColor: '#ccc',
+  },
+  separatorText: {
+    marginHorizontal: 8,
+    color: '#666',
+  },
+  socialContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    width: '100%',
+  },
+  socialButton: {
+    flex: 1,
+    borderWidth: 1,
+    borderColor: '#ccc',
     borderRadius: 8,
-    alignItems: "center",
-    marginTop: 16,
+    paddingVertical: 10,
+    marginHorizontal: 5,
+    alignItems: 'center',
   },
-
-  secondaryText: {
-    color: "#BD0A0A",
-    fontSize: 18,
-    fontWeight: "600",
+  socialText: {
+    color: '#333',
+    fontWeight: '600',
   },
 });
