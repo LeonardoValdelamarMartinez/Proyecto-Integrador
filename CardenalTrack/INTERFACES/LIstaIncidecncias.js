@@ -56,12 +56,6 @@ export default function MisReportesScreen() {
         contentContainerStyle={styles.list}
       />
 
-      <View style={styles.navbar}>
-        <TouchableOpacity style={styles.navItem}><Text style={styles.navText}>Inicio</Text></TouchableOpacity>
-        <TouchableOpacity style={styles.navItem}><Text style={styles.navText}>Reportes</Text></TouchableOpacity>
-        <TouchableOpacity style={styles.navItem}><Text style={styles.navText}>Seguimiento</Text></TouchableOpacity>
-        <TouchableOpacity style={styles.navItem}><Text style={styles.navText}>Perfil</Text></TouchableOpacity>
-      </View>
     </SafeAreaView>
   );
 }
