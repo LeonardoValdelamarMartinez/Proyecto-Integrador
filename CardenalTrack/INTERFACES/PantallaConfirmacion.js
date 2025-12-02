@@ -1,4 +1,5 @@
-import React from 'react';
+// screens/ConfirmationScreen.js - VERSIÓN ACTUALIZADA CON BASE DE DATOS
+import React, { useEffect, useState } from 'react';
 import {
   SafeAreaView,
   ScrollView,
@@ -7,19 +8,126 @@ import {
   StyleSheet,
   TouchableOpacity,
   StatusBar,
-  Image,
+  ActivityIndicator,
 } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useRoute } from '@react-navigation/native';
+import DatabaseService from '../database/DatabaseService';
 
-const ConfirmationScreen = ({ route }) => {
+const ConfirmationScreen = () => {
   const navigation = useNavigation();
-  
-  // Datos del reporte (en producción vendrían de la base de datos o parámetros de navegación)
-  const reportData = route?.params || {
-    id: '#INC-20231105-089',
-    date: '05/11/2023',
-    time: '15:42',
+  const route = useRoute();
+  const [loading, setLoading] = useState(false);
+  const [reportData, setReportData] = useState(null);
+  const [error, setError] = useState(null);
+
+  // Obtener datos del reporte recién creado
+  useEffect(() => {
+    const initializeData = async () => {
+      try {
+        setLoading(true);
+        
+        // Obtener el reportId de los parámetros de navegación
+        const { reportId } = route.params || {};
+        
+        if (reportId) {
+          // Si tenemos un reportId, buscamos el reporte en la base de datos
+          const report = await DatabaseService.getReportById(reportId);
+          
+          if (report) {
+            // Formatear los datos del reporte
+            setReportData({
+              id: `#INC-${new Date(report.fecha_completa).getFullYear()}${String(new Date(report.fecha_completa).getMonth() + 1).padStart(2, '0')}${String(new Date(report.fecha_completa).getDate()).padStart(2, '0')}-${String(report.id).padStart(3, '0')}`,
+              date: report.fecha_reporte,
+              time: report.hora_reporte,
+              titulo: report.titulo,
+              categoria: report.categoria,
+              prioridad: report.prioridad,
+              estado: report.estado
+            });
+          } else {
+            // Si no encontramos el reporte, usamos datos de ejemplo
+            const fechaMX = DatabaseService.getNowMexicoDateTime();
+            setReportData({
+              id: DatabaseService.generateReportId(),
+              date: fechaMX.date,
+              time: fechaMX.time,
+              titulo: route.params?.titulo || 'Reporte de incidencia',
+              categoria: route.params?.categoria || 'General',
+              prioridad: route.params?.prioridad || 'Media',
+              estado: 'pendiente'
+            });
+          }
+        } else {
+          // Si no hay reportId, usamos datos de ejemplo
+          const fechaMX = DatabaseService.getNowMexicoDateTime();
+          setReportData({
+            id: DatabaseService.generateReportId(),
+            date: fechaMX.date,
+            time: fechaMX.time,
+            titulo: 'Reporte de incidencia',
+            categoria: 'General',
+            prioridad: 'Media',
+            estado: 'pendiente'
+          });
+        }
+        
+        setError(null);
+      } catch (err) {
+        console.error('Error al cargar datos del reporte:', err);
+        setError('Error al cargar los datos del reporte');
+        
+        // Datos de respaldo en caso de error
+        const fechaMX = DatabaseService.getNowMexicoDateTime();
+        setReportData({
+          id: DatabaseService.generateReportId(),
+          date: fechaMX.date,
+          time: fechaMX.time,
+          titulo: 'Reporte de incidencia',
+          categoria: 'General',
+          prioridad: 'Media',
+          estado: 'pendiente'
+        });
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    initializeData();
+  }, [route.params]);
+
+  const handleViewMyReports = () => {
+    navigation.navigate('MyReports');
   };
+
+  const handleGoHome = () => {
+    navigation.navigate('Home');
+  };
+
+  if (loading) {
+    return (
+      <SafeAreaView style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#1a237e" />
+        <Text style={styles.loadingText}>Cargando confirmación...</Text>
+      </SafeAreaView>
+    );
+  }
+
+  if (!reportData) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
+        <View style={styles.errorContainer}>
+          <Text style={styles.errorText}>No se pudo cargar la información del reporte</Text>
+          <TouchableOpacity 
+            style={styles.buttonSecondary}
+            onPress={handleGoHome}
+          >
+            <Text style={styles.buttonSecondaryText}>Volver al inicio</Text>
+          </TouchableOpacity>
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.container}>
@@ -52,23 +160,60 @@ const ConfirmationScreen = ({ route }) => {
             
             <View style={styles.separator} />
             
-            <Text style={styles.infoLabel}>Fecha:</Text>
+            <Text style={styles.infoLabel}>Fecha y hora:</Text>
             <Text style={styles.infoValue}>
               {reportData.date} - {reportData.time}
             </Text>
+            
+            <View style={styles.separator} />
+            
+            <Text style={styles.infoLabel}>Título:</Text>
+            <Text style={styles.infoValue}>{reportData.titulo}</Text>
+            
+            <View style={styles.separator} />
+            
+            <Text style={styles.infoLabel}>Categoría:</Text>
+            <Text style={styles.infoValue}>{reportData.categoria}</Text>
+            
+            <View style={styles.separator} />
+            
+            <Text style={styles.infoLabel}>Prioridad:</Text>
+            <Text style={[styles.infoValue, 
+              reportData.prioridad === 'Alta' ? styles.highPriority :
+              reportData.prioridad === 'Media' ? styles.mediumPriority :
+              styles.lowPriority
+            ]}>
+              {reportData.prioridad}
+            </Text>
+            
+            <View style={styles.separator} />
+            
+            <Text style={styles.infoLabel}>Estado:</Text>
+            <View style={[
+              styles.statusBadge,
+              reportData.estado === 'resuelto' ? styles.statusResolved :
+              reportData.estado === 'en_proceso' ? styles.statusInProgress :
+              styles.statusPending
+            ]}>
+              <Text style={styles.statusText}>
+                {reportData.estado === 'pendiente' ? 'Pendiente' :
+                 reportData.estado === 'en_proceso' ? 'En Proceso' :
+                 reportData.estado === 'resuelto' ? 'Resuelto' : 'Pendiente'}
+              </Text>
+            </View>
           </View>
 
           {/* Botones de acción */}
           <TouchableOpacity 
             style={styles.buttonPrimary}
-            onPress={() => navigation.navigate('MyReports')}
+            onPress={handleViewMyReports}
           >
             <Text style={styles.buttonPrimaryText}>Ver mis reportes</Text>
           </TouchableOpacity>
 
           <TouchableOpacity 
             style={styles.buttonSecondary}
-            onPress={() => navigation.navigate('Home')}
+            onPress={handleGoHome}
           >
             <Text style={styles.buttonSecondaryText}>Volver al inicio</Text>
           </TouchableOpacity>
@@ -146,6 +291,29 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#ffffff',
   },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#ffffff',
+  },
+  loadingText: {
+    marginTop: 20,
+    fontSize: 16,
+    color: '#666',
+  },
+  errorContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  errorText: {
+    fontSize: 16,
+    color: '#d32f2f',
+    textAlign: 'center',
+    marginBottom: 20,
+  },
   scrollContainer: {
     flexGrow: 1,
   },
@@ -219,17 +387,51 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#666',
     marginBottom: 5,
+    fontWeight: '500',
   },
   infoValue: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: '600',
     color: '#1a237e',
     marginBottom: 15,
   },
+  highPriority: {
+    color: '#d32f2f',
+    fontWeight: 'bold',
+  },
+  mediumPriority: {
+    color: '#f57c00',
+    fontWeight: 'bold',
+  },
+  lowPriority: {
+    color: '#388e3c',
+    fontWeight: 'bold',
+  },
+  statusBadge: {
+    alignSelf: 'flex-start',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 20,
+    marginTop: 5,
+  },
+  statusPending: {
+    backgroundColor: '#ffecb3',
+  },
+  statusInProgress: {
+    backgroundColor: '#bbdefb',
+  },
+  statusResolved: {
+    backgroundColor: '#c8e6c9',
+  },
+  statusText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#333',
+  },
   separator: {
     height: 1,
     backgroundColor: '#e0e0e0',
-    marginVertical: 15,
+    marginVertical: 12,
   },
   buttonPrimary: {
     backgroundColor: '#1a237e',
