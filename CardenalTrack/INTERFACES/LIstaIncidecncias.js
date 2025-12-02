@@ -25,12 +25,17 @@ export default function MisReportesScreen() {
   };
 
   const renderItem = ({ item }) => (
+    <TouchableOpacity
+    onPress={() => navigation.navigate("DetalleIncidencia", { incidencia: item })}
+  >
     <View style={styles.card}>
       <Text style={styles.titulo}>{item.titulo}</Text>
       <Text style={styles.detalle}>Sector: {item.sector}</Text>
       <Text style={styles.detalle}>Fecha: {item.fecha}</Text>
       <Text style={styles.estado}>Estado: {item.estado}</Text>
     </View>
+    
+    </TouchableOpacity>
   );
 
   return (

@@ -10,9 +10,10 @@ import InicioDeSesion from './INTERFACES/InicioDeSesion';
 import Registro from './INTERFACES/PantalladeRegistro';
 import RecuperarContraseña from './INTERFACES/OlvidarContrasena';
 import PantallaSeguimiento from './INTERFACES/PantallaSeguimiento';
-import MisReportesScreen from './INTERFACES/ListaIncidecncias';
+import MisReportesScreen from './INTERFACES/LIstaIncidecncias';
 import NuevoReporteScreen from './INTERFACES/PantallaReportes';
 import Dashboard from './INTERFACES/Dashboard';
+import DetalleIncidenciaScreen from './INTERFACES/DetallesIncidencia';
 
 // Importa la pantalla de confirmación
 import ConfirmationScreen from './INTERFACES/PantalladeConfirmacion';
@@ -126,6 +127,11 @@ export default function App() {
           name="Profile"
           component={Dashboard}
           options={{ title: 'Perfil' }}
+        />
+        <Stack.Screen
+          name="DetalleIncidencia"
+          component={DetalleIncidenciaScreen}
+          options={{ title: 'Detalle de Incidencia' }}
         />
       </Stack.Navigator>
     </NavigationContainer>

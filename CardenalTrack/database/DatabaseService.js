@@ -290,6 +290,26 @@ class DatabaseService {
 
     return rows;
   }
+
+  async updateReporteEstado(id, nuevoEstado) {
+    await this.initialize();
+  
+    if (Platform.OS === "web") {
+      const data = localStorage.getItem(this.storageKeyReportes);
+      const lista = data ? JSON.parse(data) : [];
+      const idx = lista.findIndex((r) => r.id === id);
+      if (idx === -1) return null;
+  
+      lista[idx].estado = nuevoEstado;
+      localStorage.setItem(this.storageKeyReportes, JSON.stringify(lista));
+      return true;
+    }
+  
+    return await this.db.runAsync(
+      "UPDATE reportes SET estado = ? WHERE id = ?;",
+      [nuevoEstado, id]
+    );
+  }
 }
 
 export default new DatabaseService();
