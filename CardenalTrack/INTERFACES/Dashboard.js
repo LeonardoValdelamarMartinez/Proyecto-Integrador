@@ -99,7 +99,7 @@ export default function Dashboard({ navigation }) {
           icon="notifications-none"
           iconColor="#b91c1c"
           bgColor="#fee2e2"
-          onPress={() => Alert.alert("Notificaciones", "Sin nuevas alertas")}
+          onPress={() => navigation.navigate("PantallaNotificaciones")}
         />
 
         <MenuCard 
