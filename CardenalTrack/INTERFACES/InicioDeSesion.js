@@ -1,124 +1,198 @@
-import React from 'react';
-import { Image, SafeAreaView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import React, { useState, useEffect } from "react";
+import {
+  Alert,
+  SafeAreaView,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  Image,
+} from "react-native";
 
-export default function LoginScreen() {
+import DatabaseService from "../database/DatabaseService";
+
+const Logo = require("../assets/LogoCardenal.png");
+
+export default function InicioSesion({ navigation }) {
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+
+  useEffect(() => {
+    DatabaseService.initialize();
+  }, []);
+
+  const onContinue = async () => {
+    if (!email.trim() || !password.trim()) {
+      Alert.alert("Campo vacío", "Ingresa tu correo y contraseña.");
+      return;
+    }
+
+    try {
+      const user = await DatabaseService.getUserEmailPassword(
+        email.trim(),
+        password.trim()
+      );
+
+      if (!user) {
+        Alert.alert("Error", "Correo o contraseña incorrectos");
+        return;
+      }
+
+      DatabaseService.setCurrentUser(user);
+      navigation.replace("MainTabs");
+    } catch (error) {
+      console.log(error);
+      Alert.alert("Error", "No se pudo validar tu cuenta.");
+    }
+  };
+
+  const goRecuperar = () => {
+    navigation.navigate("RecuperarContraseña");
+  };
+
+  const goRegistro = () => {
+    navigation.navigate("Registro");
+  };
+
   return (
     <SafeAreaView style={styles.container}>
-      <Image source={require('./assets/cardenal-logo.png')} style={styles.logo} />
+      <ScrollView contentContainerStyle={styles.scroll}>
+        
+        {/* LOGO */}
+        <Image source={Logo} style={styles.logo} />
 
-      <Text style={styles.title}>CardenalTrak</Text>
-      <Text style={styles.subtitle}>Iniciar Sesión</Text>
+        <Text style={styles.title}>CardenalTrak</Text>
+        <Text style={styles.subtitle}>Inicia sesión para continuar</Text>
 
-      <Text style={styles.label}>Correo Institucional</Text>
-      <TextInput
-        style={styles.input}
-        placeholder="usuario@ejemplo.edu.mx"
-        keyboardType="email-address"
-        autoCapitalize="none"
-      />
+        {/* CORREO */}
+        <Text style={styles.label}>Correo electrónico</Text>
+        <TextInput
+          style={styles.input}
+          placeholder="correo@dominio.com"
+          placeholderTextColor="#999"
+          keyboardType="email-address"
+          autoCapitalize="none"
+          value={email}
+          onChangeText={setEmail}
+        />
 
-      <Text style={styles.label}>Contraseña</Text>
-      <TextInput
-        style={styles.input}
-        placeholder="********"
-        secureTextEntry
-      />
+        {/* CONTRASEÑA */}
+        <Text style={styles.label}>Contraseña</Text>
+        <TextInput
+          style={styles.input}
+          placeholder="*************"
+          placeholderTextColor="#999"
+          secureTextEntry
+          value={password}
+          onChangeText={setPassword}
+        />
 
-      <TouchableOpacity>
-        <Text style={styles.link}>¿Olvidaste tu contraseña?</Text>
-      </TouchableOpacity>
-
-      <TouchableOpacity style={styles.button}>
-        <Text style={styles.buttonText}>Ingresar</Text>
-      </TouchableOpacity>
-
-      <TouchableOpacity>
-        <Text style={styles.link}>¿No tienes una cuenta? Regístrate</Text>
-      </TouchableOpacity>
-
-      <Text style={styles.or}>o continúa con</Text>
-
-      <View style={styles.socialContainer}>
-        <TouchableOpacity style={styles.socialButton}>
-          <Text style={styles.socialText}>Google</Text>
+        {/* BOTÓN INICIAR SESIÓN */}
+        <TouchableOpacity style={styles.primaryBtn} onPress={onContinue}>
+          <Text style={styles.primaryText}>Iniciar Sesión</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.socialButton}>
-          <Text style={styles.socialText}>Microsoft</Text>
+
+        {/* OPCIÓN PARA RECUPERAR CONTRASEÑA */}
+        <TouchableOpacity onPress={goRecuperar}>
+          <Text style={styles.recoverText}>¿Olvidaste tu contraseña?</Text>
         </TouchableOpacity>
-      </View>
+
+        {/* REGISTRO */}
+        <TouchableOpacity style={styles.secondaryBtn} onPress={goRegistro}>
+          <Text style={styles.secondaryText}>Crear una cuenta</Text>
+        </TouchableOpacity>
+
+      </ScrollView>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    padding: 24,
-    backgroundColor: '#fff',
-    justifyContent: 'center',
+  container: { flex: 1, backgroundColor: "#fff" },
+
+  scroll: {
+    flexGrow: 1,
+    alignItems: "center",
+    paddingHorizontal: 28,
+    justifyContent: "center",
   },
+
   logo: {
-    width: 100,
-    height: 100,
-    alignSelf: 'center',
-    marginBottom: 12,
+    width: 110,
+    height: 110,
+    resizeMode: "contain",
+    marginBottom: 10,
   },
+
   title: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: '#B00020',
-    textAlign: 'center',
+    fontSize: 30,
+    color: "#BD0A0A",
+    fontWeight: "bold",
+    textAlign: "center",
   },
+
   subtitle: {
-    fontSize: 20,
-    marginVertical: 12,
-    textAlign: 'center',
+    fontSize: 15,
+    color: "#333",
+    textAlign: "center",
+    marginBottom: 24,
   },
+
   label: {
-    fontSize: 14,
+    width: "100%",
+    fontSize: 15,
+    fontWeight: "600",
+    color: "#222",
     marginTop: 12,
-    color: '#333',
+    marginBottom: 6,
   },
+
   input: {
+    width: "100%",
+    height: 48,
+    borderRadius: 10,
     borderWidth: 1,
-    borderColor: '#ccc',
+    borderColor: "#ccc",
+    paddingHorizontal: 12,
+    backgroundColor: "#F5F5F5",
+    fontSize: 15,
+  },
+
+  primaryBtn: {
+    width: "60%",
+    backgroundColor: "#BD0A0A",
+    paddingVertical: 12,
     borderRadius: 8,
-    padding: 12,
-    marginTop: 4,
+    alignItems: "center",
+    marginTop: 26,
   },
-  link: {
-    color: '#B00020',
-    textAlign: 'center',
-    marginTop: 12,
+
+  primaryText: {
+    color: "#fff",
+    fontSize: 18,
+    fontWeight: "600",
   },
-  button: {
-    backgroundColor: '#B00020',
-    padding: 14,
+
+  recoverText: {
+    marginTop: 14,
+    color: "#BD0A0A",
+    fontSize: 15,
+    textDecorationLine: "underline",
+  },
+
+  secondaryBtn: {
+    width: "60%",
+    backgroundColor: "#F4DDDD",
+    paddingVertical: 12,
     borderRadius: 8,
-    marginTop: 20,
+    alignItems: "center",
+    marginTop: 16,
   },
-  buttonText: {
-    color: '#fff',
-    textAlign: 'center',
-    fontWeight: 'bold',
-  },
-  or: {
-    textAlign: 'center',
-    marginVertical: 16,
-    color: '#666',
-  },
-  socialContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-  },
-  socialButton: {
-    borderWidth: 1,
-    borderColor: '#ccc',
-    borderRadius: 8,
-    paddingVertical: 10,
-    paddingHorizontal: 20,
-  },
-  socialText: {
-    fontWeight: 'bold',
+
+  secondaryText: {
+    color: "#BD0A0A",
+    fontSize: 18,
+    fontWeight: "600",
   },
 });
