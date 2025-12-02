@@ -1,5 +1,14 @@
 import React, { useState } from "react";
-import {Alert, SafeAreaView, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, Image} from "react-native";
+import {
+  Alert,
+  SafeAreaView,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  Image,
+} from "react-native";
 
 import DatabaseService from "../database/DatabaseService";
 
