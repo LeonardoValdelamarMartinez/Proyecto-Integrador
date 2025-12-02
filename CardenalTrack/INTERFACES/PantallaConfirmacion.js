@@ -1,10 +1,19 @@
 import React, { useEffect, useState } from 'react';
-import {SafeAreaView, ScrollView, View, Text, StyleSheet, TouchableOpacity, StatusBar, ActivityIndicator} from 'react-native';
+import {
+  SafeAreaView,
+  ScrollView,
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  StatusBar,
+  ActivityIndicator,
+} from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import DatabaseService from '../database/DatabaseService';
 
 const ConfirmationScreen = () => {
-  const navigation = useNavigation();
+  const navigation = useNavigation();   
   const route = useRoute();
   const [loading, setLoading] = useState(false);
   const [reportData, setReportData] = useState(null);
